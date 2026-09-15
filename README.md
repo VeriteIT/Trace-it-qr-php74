@@ -99,10 +99,13 @@ Three layers, because the first two are not enough on their own:
   five image sizes and four corners, with the SSRF host allowlist confirmed to still
   refuse `169.254.169.254` and `file://`.
 
-That third layer is not redundant. It caught two faults the first two missed, both of
-which would have shipped: `new Layout()` as a parameter default, which the 7.4 grammar
-accepts and the 7.4 compiler rejects; and `PostId implements \Stringable`, which is a
-fatal error at class-load time rather than a syntax error.
+That third layer is not redundant, though the two faults it once caught no longer sit the
+same way. `new Layout()` as a parameter default is now caught at build time, by the tree
+walk described above — the earlier layers have grown to cover it. `PostId implements
+\Stringable` is not, and cannot be: it is valid 7.4 syntax and behaves identically on 8.x,
+so it passes both earlier layers untouched and then fatals at class-load time on the real
+interpreter. Both faults were reinstated deliberately to confirm each is still caught where
+this says it is.
 
 ---
 

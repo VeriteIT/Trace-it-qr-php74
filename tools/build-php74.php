@@ -36,6 +36,7 @@ declare(strict_types=1);
 require __DIR__ . '/../.tools/vendor/autoload.php';
 
 use PhpParser\Node;
+use PhpParser\NodeFinder;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitorAbstract;
 use PhpParser\ParserFactory;
@@ -81,6 +82,9 @@ sort($files);
 
 $parser  = (new ParserFactory())->createForNewestSupportedVersion();
 $printer = new PrettyPrinter\Standard();
+
+// Reads the OUTPUT back, pinned to 7.4. See the check pass at the end of the file.
+$parser74 = (new ParserFactory())->createForVersion(PhpVersion::fromString('7.4'));
 
 /*
  * PASS 1 — build the signature map that makes named-argument resolution safe.
@@ -368,6 +372,7 @@ final class Php74Visitor extends NodeVisitorAbstract
 // ── run ──────────────────────────────────────────────────────────────────
 @mkdir($out . '/src/Cache', 0777, true);
 $total = [];
+$written = [];
 
 foreach ($asts as $file => [$code, $stmts]) {
     // track the enclosing class so self:: resolves
@@ -398,6 +403,7 @@ foreach ($asts as $file => [$code, $stmts]) {
             . " * Source: $rel  ·  Regenerate: php tools/build-php74.php\n */\n";
     $body = $printer->prettyPrint($new);
     file_put_contents($dest, $banner . "\n" . $body . "\n");
+    $written[] = $dest;
 }
 
 // ── polyfills ────────────────────────────────────────────────────────────
@@ -462,6 +468,143 @@ file_put_contents(
     $out . '/composer.json',
     json_encode($cj, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n"
 );
+
+// ── check the output ─────────────────────────────────────────────────────
+/*
+ * Two checks over what was just written, both cheap and both local. Neither
+ * replaces running the result on a real 7.4 interpreter — see tools/verify-php74.sh,
+ * which is the authority and which has caught faults these two cannot.
+ *
+ * WHY TWO. Re-parsing under the 7.4 grammar is the obvious check and, on its own,
+ * a weak one: php-parser's 7.4 parser rejects `readonly`, `match` and `enum`, but
+ * happily accepts promoted constructor parameters, named arguments, union types,
+ * nullsafe calls, non-capturing catch, `new` in an initialiser and first-class
+ * callables. Seven of the nine transforms this generator performs could regress
+ * without the grammar noticing.
+ *
+ * So the second check is the one that does the work: walk the output AST and fail
+ * on any node that only exists in PHP 8. That asks the question actually worth
+ * asking — did the transform leave anything behind — rather than whether a parser
+ * happens to object.
+ */
+final class Php8Residue extends NodeVisitorAbstract
+{
+    public array $found = [];
+
+    public function enterNode(Node $node)
+    {
+        $at = $node->getStartLine();
+
+        if ($node instanceof Node\Param) {
+            if ($node->flags !== 0) {
+                $this->note('promoted constructor parameter', $at);
+            }
+            if ($node->default !== null
+                && (new NodeFinder())->findFirstInstanceOf([$node->default], Node\Expr\New_::class)) {
+                $this->note('new in a parameter default', $at);
+            }
+        }
+
+        if ($node instanceof Node\Arg && $node->name !== null) {
+            $this->note('named argument', $at);
+        }
+
+        if ($node instanceof Node\UnionType) {
+            $this->note('union type', $at);
+        }
+
+        if ($node instanceof Node\IntersectionType) {
+            $this->note('intersection type', $at);
+        }
+
+        if ($node instanceof Node\Expr\NullsafePropertyFetch
+            || $node instanceof Node\Expr\NullsafeMethodCall) {
+            $this->note('nullsafe operator', $at);
+        }
+
+        if ($node instanceof Node\Expr\Match_) {
+            $this->note('match expression', $at);
+        }
+
+        if ($node instanceof Node\Stmt\Catch_ && $node->var === null) {
+            $this->note('non-capturing catch', $at);
+        }
+
+        if ($node instanceof Node\Stmt\Enum_) {
+            $this->note('enum', $at);
+        }
+
+        if ($node instanceof Node\VariadicPlaceholder) {
+            $this->note('first-class callable', $at);
+        }
+
+        if ($node instanceof Node\AttributeGroup) {
+            $this->note('attribute', $at);
+        }
+
+        // readonly on a property, a promoted parameter, or (8.2) a whole class
+        foreach (['flags'] as $slot) {
+            if (isset($node->$slot) && is_int($node->$slot)
+                && ($node->$slot & Node\Stmt\Class_::MODIFIER_READONLY)) {
+                $this->note('readonly', $at);
+            }
+        }
+
+        // `mixed` (8.0) and `never` (8.1), in type position only — an Identifier
+        // elsewhere is a method or property name and means nothing here.
+        foreach (['type', 'returnType'] as $slot) {
+            if (isset($node->$slot) && $node->$slot instanceof Node\Identifier
+                && in_array(strtolower($node->$slot->name), ['mixed', 'never'], true)) {
+                $this->note($node->$slot->name . ' type', $at);
+            }
+        }
+
+        return null;
+    }
+
+    private function note(string $what, int $line): void
+    {
+        $this->found[] = sprintf('%s (line %d)', $what, $line);
+    }
+}
+
+$written[] = $out . '/src/polyfill.php';
+$bad = 0;
+
+foreach ($written as $file) {
+    $rel  = str_replace('\\', '/', substr($file, strlen($out) + 1));
+    $code = file_get_contents($file);
+
+    try {
+        $stmts = $parser74->parse($code);
+    } catch (PhpParser\Error $e) {
+        echo "  REJECTED by the 7.4 grammar  $rel: " . $e->getMessage() . "\n";
+        $bad++;
+        continue;
+    }
+
+    $scan = new Php8Residue();
+    $tr   = new NodeTraverser();
+    $tr->addVisitor($scan);
+    $tr->traverse($stmts);
+
+    if ($scan->found !== []) {
+        // One constructor is one line, so the same finding repeats per parameter.
+        $seen = [];
+        foreach (array_count_values($scan->found) as $what => $n) {
+            $seen[] = $n > 1 ? $what . ' x' . $n : $what;
+        }
+        echo "  PHP 8 left in  $rel: " . implode(', ', $seen) . "\n";
+        $bad++;
+    }
+}
+
+if ($bad > 0) {
+    fwrite(STDERR, "\n$bad generated file(s) are not PHP 7.4. Nothing downstream is trustworthy until that is fixed.\n");
+    exit(1);
+}
+
+echo 'checked: ' . count($written) . " files parse as 7.4 and contain no PHP 8 constructs\n\n";
 
 echo "transforms applied:\n";
 foreach ($total as $k => $v) { printf("  %-24s %d\n", $k, $v); }

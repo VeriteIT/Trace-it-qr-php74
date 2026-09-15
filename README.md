@@ -5,10 +5,11 @@ Same package, same behaviour, compiled down to run on 7.4.
 
 > ### This code is generated. Do not edit it.
 >
-> Every file here is produced from the 8.1 source by `tools/build-php74.php` in the
-> main repository. An edit made here is lost the next time the build runs, and it
-> silently turns this into a fork — which is the one thing the generator exists to
-> prevent. **Fix it in the 8.1 source and regenerate.**
+> Every file here is produced from the 8.1 source by `tools/build-php74.php`, which lives
+> in this repository and reads the 8.1 package checked out beside it. An edit made here
+> is lost the next time the build runs, and it silently turns this into a fork — which
+> is the one thing the generator exists to prevent. **Fix it in the 8.1 source and
+> regenerate.**
 
 ---
 
@@ -75,8 +76,17 @@ the same, and is checked rather than assumed. See below.
 
 Three layers, because the first two are not enough on their own:
 
-- **It parses under the 7.4 grammar** — every file, checked with `nikic/php-parser`
-  targeting 7.4.
+- **The output carries no PHP 8 that the transform missed** — the generator re-reads every
+  file it has just written, parses it with `nikic/php-parser` pinned to 7.4, and then walks
+  the syntax tree for constructs that exist only in PHP 8. The build fails, loudly, if
+  either check finds anything.
+
+  The grammar parse on its own would not be worth much, and it is worth saying why. That
+  parser rejects `readonly`, `match` and `enum`, but it accepts promoted constructor
+  parameters, named arguments, union types, nullsafe calls, non-capturing `catch` and `new`
+  in an initialiser — seven of the nine transforms could regress without it objecting. The
+  tree walk is what covers those. It was confirmed by disabling a transform on purpose and
+  checking that the build refused to complete.
 
 - **It behaves identically to the 8.1 build** — the generated code is also valid PHP 8,
   so both builds run the same 63-assertion dump and the output is compared byte for

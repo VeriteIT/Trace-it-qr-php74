@@ -1,5 +1,5 @@
-# Generated build — never hand-edited.
 /vendor/
+/.tools/
 .env
 .env.*
 .idea/

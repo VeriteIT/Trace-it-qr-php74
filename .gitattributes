@@ -1,0 +1,14 @@
+# LF in the repository and in the working tree, on every platform. The main
+# repository pins this too: a mixed checkout once cost a lint-clean but
+# runtime-broken release, because a patch script matched 
+ against CRLF files.
+* text=auto eol=lf
+
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.pdf  binary
+
+*.php diff=php
+*.md  diff=markdown

@@ -1,0 +1,36 @@
+{
+    "name": "veriteit/trace-it-qr-php74",
+    "description": "PHP 7.4 build of veriteit/trace-it-qr. Generated from the 8.1 source; do not edit by hand.",
+    "type": "library",
+    "license": "proprietary",
+    "keywords": [
+        "qr",
+        "trace-it",
+        "cms",
+        "newsroom",
+        "attribution"
+    ],
+    "homepage": "https://trace-it.io",
+    "require": {
+        "php": ">=7.4",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "ext-gd": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "VeriteIt\\TraceItQr\\": "src/"
+        },
+        "files": [
+            "src/polyfill.php"
+        ]
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "support": {
+        "issues": "https://github.com/VeriteIT/Trace-it-Composer-Package/issues",
+        "source": "https://github.com/VeriteIT/Trace-it-Composer-Package"
+    }
+}

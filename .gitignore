@@ -1,0 +1,8 @@
+# Generated build — never hand-edited.
+/vendor/
+.env
+.env.*
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store

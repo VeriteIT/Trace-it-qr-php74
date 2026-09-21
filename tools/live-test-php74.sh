@@ -13,7 +13,23 @@
 set -u
 
 POST_ID="${1:-preflight-check}"
+ARTICLE_URL="${2:-}"
+IMAGE_URL="${3:-}"
 SRC="${SRC:-.}"
+
+# Pass the optional URLs only when they are actually set. Handing the examples an
+# empty string is not the same as omitting it: preflight reads "" as a URL that is
+# not https and reports FAIL, when the honest answer is SKIP.
+# They are positional, so the image URL cannot be given without the article URL —
+# it would silently be read as the article URL. Refuse rather than mislead.
+if [ -n "$IMAGE_URL" ] && [ -z "$ARTICLE_URL" ]; then
+    echo "An image URL needs an article URL before it: $0 <postId> <articleUrl> <imageUrl>"
+    exit 2
+fi
+
+set -- "$POST_ID"
+if [ -n "$ARTICLE_URL" ]; then set -- "$@" "$ARTICLE_URL"; fi
+if [ -n "$IMAGE_URL" ]; then set -- "$@" "$IMAGE_URL"; fi
 
 echo "interpreter : $(php -r 'echo PHP_VERSION;')"
 echo "gd          : $(php -r 'echo extension_loaded("gd") ? "loaded" : "MISSING";')"
@@ -29,13 +45,13 @@ if [ -z "${TRACEIT_API_KEY:-}" ] || [ -z "${TRACEIT_BASE:-}" ]; then
 fi
 
 echo "=========== preflight ==========="
-php "$SRC/examples/preflight.php" "$POST_ID" "${2:-}" "${3:-}"
+php "$SRC/examples/preflight.php" "$@"
 pf=$?
 echo "preflight exit: $pf"
 echo
 
 echo "=========== smoke test ==========="
-php "$SRC/examples/smoke-test.php" "$POST_ID" "${2:-}" "${3:-}"
+php "$SRC/examples/smoke-test.php" "$@"
 st=$?
 echo "smoke exit: $st"
 

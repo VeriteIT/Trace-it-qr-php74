@@ -44,5 +44,5 @@ interface Store
      * @param  callable():T $work
      * @return T
      */
-    public function lock(string $postId, callable $work): mixed;
+    public function lock(string $postId, callable $work);
 }

@@ -79,7 +79,7 @@ final class FilesystemStore implements Store
         usort($out, static fn(array $a, array $b) => strcmp((string) ($b['createdAt'] ?? ''), (string) ($a['createdAt'] ?? '')));
         return $out;
     }
-    public function lock(string $postId, callable $work): mixed
+    public function lock(string $postId, callable $work)
     {
         // A separate lock file, not the data file: a reader must never block on a
         // record being written, and a writer must not truncate what readers see.

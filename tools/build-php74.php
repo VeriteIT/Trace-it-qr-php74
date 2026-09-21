@@ -138,6 +138,34 @@ final class Php74Visitor extends NodeVisitorAbstract
             }
         }
 
+        /*
+         * `mixed` (8.0) and `never` (8.1) -> no type.
+         *
+         * This one is nastier than it looks, and it shipped once. On 7.4 `mixed` is
+         * not a reserved word, so `: mixed` is not a syntax error — it is a class
+         * type hint, resolved against the current namespace. FilesystemStore::lock()
+         * became `: VeriteIt\TraceItQr\Cache\mixed` and fatalled on return, at
+         * runtime, only on 7.4, and only on the publish path. The 7.4 grammar
+         * accepts it and PHP 8 treats it as the real builtin, so nothing short of
+         * running the publish path on 7.4 could see it.
+         */
+        foreach (['type', 'returnType'] as $slot) {
+            if (!isset($node->$slot)) {
+                continue;
+            }
+            $t = $node->$slot;
+            $name = null;
+            if ($t instanceof Node\Identifier) {
+                $name = $t->name;
+            } elseif ($t instanceof Node\Name) {
+                $name = $t->getLast();
+            }
+            if ($name !== null && in_array(strtolower($name), ['mixed', 'never'], true)) {
+                $node->$slot = null;
+                $this->notes[] = strtolower($name) . ' type removed';
+            }
+        }
+
         // non-capturing catch
         if ($node instanceof Node\Stmt\Catch_ && $node->var === null) {
             $node->var = new Node\Expr\Variable('__unused');
@@ -550,12 +578,30 @@ final class Php8Residue extends NodeVisitorAbstract
             }
         }
 
-        // `mixed` (8.0) and `never` (8.1), in type position only — an Identifier
-        // elsewhere is a method or property name and means nothing here.
+        /*
+         * `mixed` (8.0) and `never` (8.1), in type position only — the same name
+         * elsewhere is a method or property and means nothing here.
+         *
+         * Both spellings have to be checked, and missing that is what let the
+         * FilesystemStore::lock() bug through. This scan reads the output back with
+         * the 7.4 parser, and 7.4 has no such builtin — so `: mixed` comes back as a
+         * Node\Name (a class called "mixed"), never a Node\Identifier. Checking only
+         * Identifier meant the check could never fire on the one build it exists to
+         * police.
+         */
         foreach (['type', 'returnType'] as $slot) {
-            if (isset($node->$slot) && $node->$slot instanceof Node\Identifier
-                && in_array(strtolower($node->$slot->name), ['mixed', 'never'], true)) {
-                $this->note($node->$slot->name . ' type', $at);
+            if (!isset($node->$slot)) {
+                continue;
+            }
+            $t = $node->$slot;
+            $name = null;
+            if ($t instanceof Node\Identifier) {
+                $name = $t->name;
+            } elseif ($t instanceof Node\Name) {
+                $name = $t->getLast();
+            }
+            if ($name !== null && in_array(strtolower($name), ['mixed', 'never'], true)) {
+                $this->note($name . ' type', $at);
             }
         }
 

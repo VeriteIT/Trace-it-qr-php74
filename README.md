@@ -40,8 +40,13 @@ integration.
 composer require veriteit/trace-it-qr-php74:^1.0
 ```
 
-**PHP 7.4+, `ext-curl`, `ext-json`, `ext-gd`.** All required. `ext-gd` is what draws
-the code into the photo, so Composer refuses to install without it.
+**PHP 7.4+, `ext-curl` and `ext-json` are required. `ext-gd` is a suggestion, but the
+composite endpoint does not work without it** — it is what draws the code into the photo.
+
+Only `framedImage()` uses GD, so a server that just registers codes with `publish()` does
+not need it. That also lets a server missing GD install the package and run
+`preflight.php`, which reports the fact — a hard requirement used to block the tool that
+diagnoses the problem.
 
 Everything else — configuration, the publish hook, the template changes, the composite
 endpoint, badge layout — is identical to the 8.1 package. Follow

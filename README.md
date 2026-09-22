@@ -89,23 +89,39 @@ Three layers, because the first two are not enough on their own:
   checking that the build refused to complete.
 
 - **It behaves identically to the 8.1 build** — the generated code is also valid PHP 8,
-  so both builds run the same 63-assertion dump and the output is compared byte for
+  so both builds run the same 80-assertion dump and the output is compared byte for
   byte. That covers badge geometry across 30 image-size and aspect-ratio combinations
   including the degenerate 400×120 and 90×1200 cases, every corner, every layout
-  override, post ID validation across 13 inputs, and a full `Code` round trip.
+  override, post ID validation across 13 inputs, a full `Code` round trip, and the
+  filesystem cache — `get`, `put`, `forget`, `all`, the PNG pair, and `lock()` returning
+  each kind of value a caller might hand back.
+
+  The cache half was added after a fault got past this layer and into a live run. Running
+  the dump on PHP 8 can only ever prove the two builds agree *on PHP 8*; the same dump run
+  on 7.4 in the next layer is what turns it into evidence. `lock()` is the case that
+  proved it: identical on 8.x, fatal on 7.4.
 
 - **It runs on a real PHP 7.4.33 interpreter** — lint plus the behavioural dump plus
   the whole compositing path with `ext-gd`: fetch, decode, plan, draw, encode, across
   five image sizes and four corners, with the SSRF host allowlist confirmed to still
   refuse `169.254.169.254` and `file://`.
 
-That third layer is not redundant, though the two faults it once caught no longer sit the
-same way. `new Layout()` as a parameter default is now caught at build time, by the tree
-walk described above — the earlier layers have grown to cover it. `PostId implements
-\Stringable` is not, and cannot be: it is valid 7.4 syntax and behaves identically on 8.x,
-so it passes both earlier layers untouched and then fatals at class-load time on the real
-interpreter. Both faults were reinstated deliberately to confirm each is still caught where
-this says it is.
+That third layer is not redundant. Two faults were caught here and nowhere else, and a
+third got past every offline layer and was only found by a live API call — which is the
+sharpest argument of all for not trusting a syntax check. Each was reinstated deliberately
+to confirm it is still caught where this says it is.
+
+- **`new Layout()` as a parameter default** is now caught at build time by the tree walk
+  above — the earlier layers grew to cover it.
+- **`PostId implements \Stringable`** is not, and cannot be. It is valid 7.4 syntax and
+  behaves identically on 8.x, so it passes both earlier layers untouched and then fatals at
+  class-load time on the real interpreter.
+- **`: mixed` on `FilesystemStore::lock()`** got past all three and into a live API run.
+  7.4 has no `mixed` builtin, so it resolves as a class name and the method fatals on
+  return. The grammar accepts it; PHP 8 sees the genuine builtin; and the behavioural dump
+  did not call `lock()` at all. All three holes are now closed — the tree walk rejects it,
+  and the dump exercises the cache — but it is the plainest evidence there is that a
+  syntax check and an 8.x run are not the same as running on 7.4.
 
 ---
 

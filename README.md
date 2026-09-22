@@ -48,6 +48,11 @@ not need it. That also lets a server missing GD install the package and run
 `preflight.php`, which reports the fact — a hard requirement used to block the tool that
 diagnoses the problem.
 
+If the server that faces the public cannot run the compositing endpoint — no `ext-gd`, no
+PHP, or an admin-only CMS — `examples/prewarm.php` composites at publish time on a machine
+that can, and writes files the public side serves statically. See "If the public server
+cannot composite" in the 8.1 guide.
+
 Everything else — configuration, the publish hook, the template changes, the composite
 endpoint, badge layout — is identical to the 8.1 package. Follow
 [its integration guide](https://github.com/VeriteIT/Trace-it-Composer-Package#readme),

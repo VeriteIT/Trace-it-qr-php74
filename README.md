@@ -26,6 +26,21 @@ integration.
 
 ---
 
+## Check the server first
+
+`examples/server-check.php` is self-contained — no Composer, no package, no `ext-gd` — so
+it runs before any of this and tells you whether the machine can host the integration:
+
+```bash
+php server-check.php <oneOfYourArticleIds> <aRealArticleImageUrl>
+```
+
+It names which build applies, checks the extensions and outbound HTTPS, fetches your photo
+host as the compositor would, validates an article ID, and says whether that server can
+serve composited images or only register codes. Send Verite IT the output.
+
+---
+
 ## Install
 
 ```json

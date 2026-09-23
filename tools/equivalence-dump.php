@@ -120,7 +120,7 @@ foreach (['108347979', '108-347979', '108.347979', 'news/x', 'trail-', '-lead', 
 /* ── Code round trip — promotion + readonly were dense here ────────────── */
 echo "\n== Code ==\n";
 $api = [
-    'id' => 'ub1', 'postId' => '108-347979', 'shortUrl' => 'https://test.trace-it.io/ub1',
+    'id' => 'ub1', 'postId' => '108-347979', 'shortUrl' => 'https://acme.trace-it.io/ub1',
     'targetUrl' => 'https://example.lk/a', 'publishedAt' => '2026-02-14T00:00:00Z',
     'created' => true, 'qr' => ['pngUrl' => 'https://cdn/x.png', 'png' => ''],
 ];

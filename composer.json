@@ -32,7 +32,7 @@
     },
     "minimum-stability": "stable",
     "support": {
-        "issues": "https://github.com/VeriteIT/Trace-it-Composer-Package/issues",
-        "source": "https://github.com/VeriteIT/Trace-it-Composer-Package"
+        "issues": "https://github.com/VeriteIT/Trace-it-qr-php74/issues",
+        "source": "https://github.com/VeriteIT/Trace-it-qr-php74"
     }
 }

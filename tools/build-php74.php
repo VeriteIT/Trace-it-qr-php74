@@ -492,6 +492,16 @@ $cj['name'] = 'veriteit/trace-it-qr-php74';
 $cj['description'] = 'PHP 7.4 build of veriteit/trace-it-qr. Generated from the 8.1 source; do not edit by hand.';
 $cj['require']['php'] = '>=7.4';
 $cj['autoload']['files'] = ['src/polyfill.php'];
+
+/*
+ * Point support at THIS repository. Inherited from the 8.1 package, these sent a
+ * 7.4 user to the 8.1 repo — which `composer show` prints as the package source,
+ * so the one link a confused integrator clicks led to the build they cannot use.
+ */
+$cj['support'] = [
+    'issues' => 'https://github.com/VeriteIT/Trace-it-qr-php74/issues',
+    'source' => 'https://github.com/VeriteIT/Trace-it-qr-php74',
+];
 file_put_contents(
     $out . '/composer.json',
     json_encode($cj, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n"

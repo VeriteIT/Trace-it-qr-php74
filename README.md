@@ -3,26 +3,6 @@
 The PHP 7.4 build of [`veriteit/trace-it-qr`](https://github.com/VeriteIT/Trace-it-Composer-Package).
 Same package, same behaviour, compiled down to run on 7.4.
 
-> ### This code is generated. Do not edit it.
->
-> Every file here is produced from the 8.1 source by `tools/build-php74.php`, which lives
-> in this repository and reads the 8.1 package checked out beside it. An edit made here
-> is lost the next time the build runs, and it silently turns this into a fork — which
-> is the one thing the generator exists to prevent. **Fix it in the 8.1 source and
-> regenerate.**
-
----
-
-## Use the 8.1 package if you can
-
-This build exists for one reason: a CMS stuck on PHP 7.4. If your application runs
-PHP 8.1 or newer, install [`veriteit/trace-it-qr`](https://github.com/VeriteIT/Trace-it-Composer-Package)
-instead. It is the same code with stronger guarantees, and it is what we develop and
-test against first.
-
-**PHP 7.4 reached end of life in November 2022** and has received no security patches
-since. That is worth raising with whoever owns the server, separately from this
-integration.
 
 ---
 
